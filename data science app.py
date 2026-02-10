@@ -1,19 +1,18 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
-import altair as alt
-import statsmodels.api as sm
+import numpy as np
+import plotly.express as px
 
 # ---------------------------------
 # App configuration
 # ---------------------------------
 st.set_page_config(
-    page_title="Statsmodels Regression App",
+    page_title="NumPy Regression + Plotly",
     layout="centered"
 )
 
-st.title("📊 Regression Analysis with Statsmodels")
-st.write("Linear regression using Statsmodels and interactive plots with Altair")
+st.title("📊 Regression Analysis with NumPy & Plotly")
+st.write("Linear regression computed manually with interactive Plotly charts")
 
 # ---------------------------------
 # Data generation
@@ -37,7 +36,7 @@ df["Final_Score"] = (
 )
 
 # ---------------------------------
-# Data preview & summary
+# EDA
 # ---------------------------------
 st.subheader("Dataset Preview")
 st.dataframe(df.head())
@@ -51,8 +50,8 @@ st.dataframe(df.describe())
 features = ["Study_Hours", "Attendance", "Sleep_Hours", "Previous_Score"]
 target = "Final_Score"
 
-X = df[features]
-y = df[target]
+X = df[features].values
+y = df[target].values.reshape(-1, 1)
 
 # ---------------------------------
 # Train-test split
@@ -60,28 +59,29 @@ y = df[target]
 test_size = st.slider("Test set size", 0.1, 0.5, 0.2)
 split_idx = int((1 - test_size) * n)
 
-X_train = X.iloc[:split_idx]
-X_test = X.iloc[split_idx:]
-y_train = y.iloc[:split_idx]
-y_test = y.iloc[split_idx:]
+X_train = X[:split_idx]
+X_test = X[split_idx:]
+y_train = y[:split_idx]
+y_test = y[split_idx:]
 
-# Add constant for intercept
-X_train_sm = sm.add_constant(X_train)
-X_test_sm = sm.add_constant(X_test)
-
-# ---------------------------------
-# Statsmodels Linear Regression
-# ---------------------------------
-model = sm.OLS(y_train, X_train_sm)
-results = model.fit()
-
-y_pred = results.predict(X_test_sm)
+# Add intercept
+X_train_b = np.c_[np.ones((X_train.shape[0], 1)), X_train]
+X_test_b = np.c_[np.ones((X_test.shape[0], 1)), X_test]
 
 # ---------------------------------
-# Evaluation metrics
+# Linear regression (Normal Equation)
+# θ = (XᵀX)⁻¹ Xᵀy
+# ---------------------------------
+theta = np.linalg.inv(X_train_b.T @ X_train_b) @ X_train_b.T @ y_train
+y_pred = X_test_b @ theta
+
+# ---------------------------------
+# Evaluation
 # ---------------------------------
 mse = np.mean((y_test - y_pred) ** 2)
-r2 = results.rsquared
+ss_total = np.sum((y_test - np.mean(y_test)) ** 2)
+ss_residual = np.sum((y_test - y_pred) ** 2)
+r2 = 1 - (ss_residual / ss_total)
 
 st.subheader("Model Performance")
 st.metric("Mean Squared Error (MSE)", f"{mse:.2f}")
@@ -92,43 +92,44 @@ st.metric("R² Score", f"{r2:.3f}")
 # ---------------------------------
 coef_df = pd.DataFrame({
     "Feature": ["Intercept"] + features,
-    "Coefficient": results.params.values
+    "Coefficient": theta.flatten()
 })
 
 st.subheader("Model Coefficients")
 st.dataframe(coef_df)
 
 # ---------------------------------
-# Actual vs Predicted (Altair scatter)
+# Actual vs Predicted (Plotly)
 # ---------------------------------
 st.subheader("Actual vs Predicted")
 
 comparison_df = pd.DataFrame({
-    "Actual": y_test.values,
-    "Predicted": y_pred.values
+    "Actual": y_test.flatten(),
+    "Predicted": y_pred.flatten()
 })
 
-scatter_chart = alt.Chart(comparison_df).mark_circle(size=60).encode(
-    x='Actual',
-    y='Predicted',
-    tooltip=['Actual', 'Predicted']
-).interactive()
-
-st.altair_chart(scatter_chart, use_container_width=True)
+fig1 = px.scatter(
+    comparison_df, x="Actual", y="Predicted",
+    title="Actual vs Predicted",
+    labels={"Actual": "Actual Final Score", "Predicted": "Predicted Final Score"},
+    hover_data=["Actual", "Predicted"]
+)
+st.plotly_chart(fig1, use_container_width=True)
 
 # ---------------------------------
-# Residual analysis (Altair bar)
+# Residual analysis (Plotly)
 # ---------------------------------
 st.subheader("Residual Analysis")
 
-residuals = y_test.values - y_pred.values
+residuals = y_test.flatten() - y_pred.flatten()
 residuals_df = pd.DataFrame({"Residuals": residuals})
 
-residual_chart = alt.Chart(residuals_df).mark_bar().encode(
-    x=alt.X('Residuals', bin=alt.Bin(maxbins=25)),
-    y='count()'
+fig2 = px.histogram(
+    residuals_df, x="Residuals",
+    nbins=25,
+    title="Residual Distribution",
+    labels={"Residuals": "Residuals"}
 )
+st.plotly_chart(fig2, use_container_width=True)
 
-st.altair_chart(residual_chart, use_container_width=True)
-
-st.success("Regression analysis completed with Statsmodels and Altair!")
+st.success("Regression analysis completed with NumPy and Plotly!")
