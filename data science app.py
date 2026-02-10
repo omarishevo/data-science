@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
@@ -19,7 +18,7 @@ st.title("📊 Data Science Regression App")
 st.write("End-to-end regression analysis using an automatically generated dataset")
 
 # ---------------------------------
-# Data generation (controlled + realistic)
+# Data generation
 # ---------------------------------
 np.random.seed(42)
 n = 300
@@ -31,7 +30,6 @@ df = pd.DataFrame({
     "Previous_Score": np.random.normal(65, 10, n)
 })
 
-# Target variable with noise
 df["Final_Score"] = (
     5 * df["Study_Hours"]
     + 0.3 * df["Attendance"]
@@ -41,16 +39,16 @@ df["Final_Score"] = (
 )
 
 # ---------------------------------
-# Preview data
+# Data preview & EDA
 # ---------------------------------
 st.subheader("Dataset Preview")
 st.dataframe(df.head())
 
-st.subheader("Dataset Summary")
+st.subheader("Summary Statistics")
 st.dataframe(df.describe())
 
 # ---------------------------------
-# Feature selection
+# Features & target
 # ---------------------------------
 features = ["Study_Hours", "Attendance", "Sleep_Hours", "Previous_Score"]
 target = "Final_Score"
@@ -82,11 +80,11 @@ mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
 st.subheader("Model Performance")
-st.write(f"**Mean Squared Error (MSE):** {mse:.2f}")
-st.write(f"**R² Score:** {r2:.3f}")
+st.metric("Mean Squared Error (MSE)", f"{mse:.2f}")
+st.metric("R² Score", f"{r2:.3f}")
 
 # ---------------------------------
-# Coefficients interpretation
+# Coefficient interpretation
 # ---------------------------------
 coef_df = pd.DataFrame({
     "Feature": features,
@@ -97,33 +95,26 @@ st.subheader("Model Coefficients")
 st.dataframe(coef_df)
 
 # ---------------------------------
-# Visualization: Actual vs Predicted
+# Actual vs Predicted (Streamlit chart)
 # ---------------------------------
 st.subheader("Actual vs Predicted")
 
-fig1, ax1 = plt.subplots()
-ax1.scatter(y_test, y_pred)
-ax1.plot([y_test.min(), y_test.max()],
-         [y_test.min(), y_test.max()])
-ax1.set_xlabel("Actual Final Score")
-ax1.set_ylabel("Predicted Final Score")
-ax1.set_title("Model Fit")
+comparison_df = pd.DataFrame({
+    "Actual": y_test.values,
+    "Predicted": y_pred
+})
 
-st.pyplot(fig1)
+st.scatter_chart(comparison_df)
 
 # ---------------------------------
-# Residual analysis
+# Residual analysis (Streamlit chart)
 # ---------------------------------
-st.subheader("Residual Distribution")
+st.subheader("Residual Analysis")
 
-residuals = y_test - y_pred
+residuals_df = pd.DataFrame({
+    "Residuals": y_test.values - y_pred
+})
 
-fig2, ax2 = plt.subplots()
-ax2.hist(residuals, bins=25)
-ax2.set_xlabel("Residual")
-ax2.set_ylabel("Frequency")
-ax2.set_title("Residuals")
-
-st.pyplot(fig2)
+st.bar_chart(residuals_df["Residuals"].value_counts().sort_index())
 
 st.success("Regression analysis completed successfully.")
