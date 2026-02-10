@@ -1,18 +1,18 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
+import altair as alt
 
 # ---------------------------------
 # App configuration
 # ---------------------------------
 st.set_page_config(
-    page_title="NumPy Regression + Plotly",
+    page_title="NumPy Regression + Altair",
     layout="centered"
 )
 
-st.title("📊 Regression Analysis with NumPy & Plotly")
-st.write("Linear regression computed manually with interactive Plotly charts")
+st.title("📊 Regression Analysis with NumPy & Altair")
+st.write("Manual linear regression with interactive Altair charts")
 
 # ---------------------------------
 # Data generation
@@ -64,7 +64,7 @@ X_test = X[split_idx:]
 y_train = y[:split_idx]
 y_test = y[split_idx:]
 
-# Add intercept
+# Add bias term (intercept)
 X_train_b = np.c_[np.ones((X_train.shape[0], 1)), X_train]
 X_test_b = np.c_[np.ones((X_test.shape[0], 1)), X_test]
 
@@ -76,7 +76,7 @@ theta = np.linalg.inv(X_train_b.T @ X_train_b) @ X_train_b.T @ y_train
 y_pred = X_test_b @ theta
 
 # ---------------------------------
-# Evaluation
+# Evaluation metrics
 # ---------------------------------
 mse = np.mean((y_test - y_pred) ** 2)
 ss_total = np.sum((y_test - np.mean(y_test)) ** 2)
@@ -99,7 +99,7 @@ st.subheader("Model Coefficients")
 st.dataframe(coef_df)
 
 # ---------------------------------
-# Actual vs Predicted (Plotly)
+# Actual vs Predicted (Altair)
 # ---------------------------------
 st.subheader("Actual vs Predicted")
 
@@ -108,28 +108,27 @@ comparison_df = pd.DataFrame({
     "Predicted": y_pred.flatten()
 })
 
-fig1 = px.scatter(
-    comparison_df, x="Actual", y="Predicted",
-    title="Actual vs Predicted",
-    labels={"Actual": "Actual Final Score", "Predicted": "Predicted Final Score"},
-    hover_data=["Actual", "Predicted"]
-)
-st.plotly_chart(fig1, use_container_width=True)
+scatter_chart = alt.Chart(comparison_df).mark_circle(size=60).encode(
+    x='Actual',
+    y='Predicted',
+    tooltip=['Actual', 'Predicted']
+).interactive()
+
+st.altair_chart(scatter_chart, use_container_width=True)
 
 # ---------------------------------
-# Residual analysis (Plotly)
+# Residual analysis (Altair)
 # ---------------------------------
 st.subheader("Residual Analysis")
 
 residuals = y_test.flatten() - y_pred.flatten()
 residuals_df = pd.DataFrame({"Residuals": residuals})
 
-fig2 = px.histogram(
-    residuals_df, x="Residuals",
-    nbins=25,
-    title="Residual Distribution",
-    labels={"Residuals": "Residuals"}
+residual_chart = alt.Chart(residuals_df).mark_bar().encode(
+    x=alt.X('Residuals', bin=alt.Bin(maxbins=25)),
+    y='count()'
 )
-st.plotly_chart(fig2, use_container_width=True)
 
-st.success("Regression analysis completed with NumPy and Plotly!")
+st.altair_chart(residual_chart, use_container_width=True)
+
+st.success("Regression analysis completed with NumPy and Altair!")
