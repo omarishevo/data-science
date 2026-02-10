@@ -2,20 +2,16 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
-
 # ---------------------------------
 # App configuration
 # ---------------------------------
 st.set_page_config(
-    page_title="Auto Data Science App",
+    page_title="Pure NumPy Data Science App",
     layout="centered"
 )
 
 st.title("📊 Data Science Regression App")
-st.write("End-to-end regression analysis using an automatically generated dataset")
+st.write("Linear regression implemented from scratch using NumPy")
 
 # ---------------------------------
 # Data generation
@@ -39,7 +35,7 @@ df["Final_Score"] = (
 )
 
 # ---------------------------------
-# Data preview & EDA
+# EDA
 # ---------------------------------
 st.subheader("Dataset Preview")
 st.dataframe(df.head())
@@ -48,48 +44,60 @@ st.subheader("Summary Statistics")
 st.dataframe(df.describe())
 
 # ---------------------------------
-# Features & target
+# Features and target
 # ---------------------------------
 features = ["Study_Hours", "Attendance", "Sleep_Hours", "Previous_Score"]
 target = "Final_Score"
 
-X = df[features]
-y = df[target]
+X = df[features].values
+y = df[target].values.reshape(-1, 1)
 
 # ---------------------------------
-# Train-test split
+# Train-test split (manual)
 # ---------------------------------
 test_size = st.slider("Test set size", 0.1, 0.5, 0.2)
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=test_size, random_state=42
-)
+split_idx = int((1 - test_size) * n)
+
+X_train = X[:split_idx]
+X_test = X[split_idx:]
+y_train = y[:split_idx]
+y_test = y[split_idx:]
 
 # ---------------------------------
-# Model training
+# Add bias term
 # ---------------------------------
-model = LinearRegression()
-model.fit(X_train, y_train)
-
-y_pred = model.predict(X_test)
+X_train_b = np.c_[np.ones((X_train.shape[0], 1)), X_train]
+X_test_b = np.c_[np.ones((X_test.shape[0], 1)), X_test]
 
 # ---------------------------------
-# Evaluation
+# Linear Regression (Normal Equation)
+# θ = (XᵀX)⁻¹ Xᵀy
 # ---------------------------------
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
+theta = np.linalg.inv(X_train_b.T @ X_train_b) @ X_train_b.T @ y_train
+
+y_pred = X_test_b @ theta
+
+# ---------------------------------
+# Evaluation metrics (manual)
+# ---------------------------------
+mse = np.mean((y_test - y_pred) ** 2)
+
+ss_total = np.sum((y_test - np.mean(y_test)) ** 2)
+ss_residual = np.sum((y_test - y_pred) ** 2)
+r2 = 1 - (ss_residual / ss_total)
 
 st.subheader("Model Performance")
 st.metric("Mean Squared Error (MSE)", f"{mse:.2f}")
 st.metric("R² Score", f"{r2:.3f}")
 
 # ---------------------------------
-# Coefficient interpretation
+# Coefficients
 # ---------------------------------
 coef_df = pd.DataFrame({
-    "Feature": features,
-    "Coefficient": model.coef_
-}).sort_values(by="Coefficient", ascending=False)
+    "Feature": ["Intercept"] + features,
+    "Coefficient": theta.flatten()
+})
 
 st.subheader("Model Coefficients")
 st.dataframe(coef_df)
@@ -100,21 +108,20 @@ st.dataframe(coef_df)
 st.subheader("Actual vs Predicted")
 
 comparison_df = pd.DataFrame({
-    "Actual": y_test.values,
-    "Predicted": y_pred
+    "Actual": y_test.flatten(),
+    "Predicted": y_pred.flatten()
 })
 
 st.scatter_chart(comparison_df)
 
 # ---------------------------------
-# Residual analysis (Streamlit chart)
+# Residual analysis
 # ---------------------------------
 st.subheader("Residual Analysis")
 
-residuals_df = pd.DataFrame({
-    "Residuals": y_test.values - y_pred
-})
+residuals = y_test.flatten() - y_pred.flatten()
+residuals_df = pd.DataFrame({"Residuals": residuals})
 
-st.bar_chart(residuals_df["Residuals"].value_counts().sort_index())
+st.line_chart(residuals_df)
 
-st.success("Regression analysis completed successfully.")
+st.success("Pure NumPy regression analysis completed successfully.")
