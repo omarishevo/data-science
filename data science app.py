@@ -2,14 +2,12 @@
 Interactive Data Science Dashboard
 A comprehensive Streamlit app for data analysis, visualization, and statistical exploration
 Author: AI Assistant
-Version: 3.0 (Lightweight - No matplotlib, No sklearn)
+Version: 4.0 (Ultra-Lightweight - Only Pandas, NumPy, Plotly)
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-from scipy import stats
-from scipy.stats import probplot
 import plotly.express as px
 import plotly.graph_objects as go
 from io import StringIO
@@ -193,7 +191,6 @@ def main():
             [
                 "📋 Data Overview",
                 "📈 Exploratory Analysis",
-                "🔍 Statistical Analysis",
                 "📊 Interactive Visualizations"
             ]
         )
@@ -204,9 +201,6 @@ def main():
         
         elif analysis_mode == "📈 Exploratory Analysis":
             show_exploratory_analysis(df)
-        
-        elif analysis_mode == "🔍 Statistical Analysis":
-            show_statistical_analysis(df)
         
         elif analysis_mode == "📊 Interactive Visualizations":
             show_interactive_visualizations(df)
@@ -224,10 +218,10 @@ def main():
             st.subheader("📊 Features")
             st.markdown("""
             - Data profiling & overview
-            - Statistical analysis
+            - Exploratory data analysis
             - Interactive visualizations
-            - Data exploration tools
-            - Export capabilities
+            - Correlation analysis
+            - Distribution analysis
             """)
         
         with col2:
@@ -235,8 +229,8 @@ def main():
             st.markdown("""
             - Pandas & NumPy
             - Plotly (interactive charts)
-            - SciPy (statistics)
-            - Pure Python analytics
+            - Pure Python
+            - Lightweight & Fast
             """)
         
         with col3:
@@ -373,111 +367,31 @@ def show_exploratory_analysis(df):
                         trendline="ols",
                         title=f"{y_col} vs {x_col}")
         st.plotly_chart(fig, use_container_width=True)
-
-def show_statistical_analysis(df):
-    """Display statistical analysis"""
-    st.header("🔍 Statistical Analysis")
-    
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    
-    if len(numeric_cols) == 0:
-        st.warning("No numeric columns found for analysis.")
-        return
-    
-    # Hypothesis Testing
-    st.subheader("Hypothesis Testing")
-    
-    test_type = st.selectbox(
-        "Select test type:",
-        ["T-Test (One Sample)", "T-Test (Two Independent)", "Chi-Square Test", "ANOVA"]
-    )
-    
-    if test_type == "T-Test (One Sample)":
-        col = st.selectbox("Select column:", numeric_cols)
-        pop_mean = st.number_input("Population mean:", value=float(df[col].mean()))
-        
-        if st.button("Run Test"):
-            t_stat, p_value = stats.ttest_1samp(df[col].dropna(), pop_mean)
-            
-            st.write(f"**T-statistic:** {t_stat:.4f}")
-            st.write(f"**P-value:** {p_value:.4f}")
-            
-            if p_value < 0.05:
-                st.success("✅ Reject null hypothesis (p < 0.05)")
-            else:
-                st.info("❌ Fail to reject null hypothesis (p >= 0.05)")
-    
-    elif test_type == "T-Test (Two Independent)" and len(numeric_cols) >= 2:
-        col1, col2 = st.columns(2)
-        with col1:
-            group1 = st.selectbox("Group 1:", numeric_cols, index=0)
-        with col2:
-            group2 = st.selectbox("Group 2:", numeric_cols, index=1)
-        
-        if st.button("Run Test"):
-            t_stat, p_value = stats.ttest_ind(df[group1].dropna(), df[group2].dropna())
-            
-            st.write(f"**T-statistic:** {t_stat:.4f}")
-            st.write(f"**P-value:** {p_value:.4f}")
-            
-            if p_value < 0.05:
-                st.success("✅ Reject null hypothesis (p < 0.05)")
-            else:
-                st.info("❌ Fail to reject null hypothesis (p >= 0.05)")
-    
-    # Normality Test
-    st.subheader("Normality Testing")
-    norm_col = st.selectbox("Select column for normality test:", numeric_cols, key='norm')
-    
-    if st.button("Test Normality"):
-        stat, p_value = stats.shapiro(df[norm_col].dropna().sample(min(5000, len(df[norm_col].dropna()))))
-        
-        st.write(f"**Shapiro-Wilk statistic:** {stat:.4f}")
-        st.write(f"**P-value:** {p_value:.4f}")
-        
-        if p_value < 0.05:
-            st.warning("⚠️ Data is NOT normally distributed (p < 0.05)")
-        else:
-            st.success("✅ Data appears normally distributed (p >= 0.05)")
-        
-        # Q-Q Plot
-        qq_data = probplot(df[norm_col].dropna(), dist="norm")
-        
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=qq_data[0][0], y=qq_data[0][1], 
-                                mode='markers', name='Data',
-                                marker=dict(color='blue', size=5)))
-        fig.add_trace(go.Scatter(x=qq_data[0][0], 
-                                y=qq_data[1][0] * qq_data[0][0] + qq_data[1][1],
-                                mode='lines', name='Theoretical',
-                                line=dict(color='red', dash='dash')))
-        fig.update_layout(title=f"Q-Q Plot for {norm_col}",
-                         xaxis_title="Theoretical Quantiles",
-                         yaxis_title="Sample Quantiles")
-        st.plotly_chart(fig, use_container_width=True)
     
     # Descriptive Statistics
-    st.subheader("Detailed Descriptive Statistics")
-    desc_col = st.selectbox("Select column:", numeric_cols, key='desc')
+    st.subheader("Descriptive Statistics")
     
-    data = df[desc_col].dropna()
+    desc_col = st.selectbox("Select column for detailed statistics:", numeric_cols, key='desc_stats')
     
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Mean", f"{data.mean():.2f}")
-        st.metric("Median", f"{data.median():.2f}")
-        st.metric("Mode", f"{data.mode().iloc[0]:.2f}" if len(data.mode()) > 0 else "N/A")
-    
-    with col2:
-        st.metric("Std Dev", f"{data.std():.2f}")
-        st.metric("Variance", f"{data.var():.2f}")
-        st.metric("Range", f"{data.max() - data.min():.2f}")
-    
-    with col3:
-        st.metric("Skewness", f"{data.skew():.2f}")
-        st.metric("Kurtosis", f"{data.kurtosis():.2f}")
-        st.metric("IQR", f"{data.quantile(0.75) - data.quantile(0.25):.2f}")
+    if desc_col:
+        data = df[desc_col].dropna()
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Count", f"{len(data)}")
+            st.metric("Mean", f"{data.mean():.2f}")
+            st.metric("Median", f"{data.median():.2f}")
+        
+        with col2:
+            st.metric("Std Dev", f"{data.std():.2f}")
+            st.metric("Min", f"{data.min():.2f}")
+            st.metric("Max", f"{data.max():.2f}")
+        
+        with col3:
+            st.metric("25th %ile", f"{data.quantile(0.25):.2f}")
+            st.metric("75th %ile", f"{data.quantile(0.75):.2f}")
+            st.metric("IQR", f"{data.quantile(0.75) - data.quantile(0.25):.2f}")
 
 def show_interactive_visualizations(df):
     """Display interactive Plotly visualizations"""
@@ -567,3 +481,4 @@ def show_interactive_visualizations(df):
 
 if __name__ == "__main__":
     main()
+    
