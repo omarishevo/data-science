@@ -1,19 +1,13 @@
 """
 Interactive Data Science Dashboard
-A comprehensive Streamlit app for data analysis, visualization, and machine learning
+A comprehensive Streamlit app for data analysis, visualization, and statistical exploration
 Author: AI Assistant
-Version: 2.0 (Matplotlib-free, 100% Plotly)
+Version: 3.0 (Lightweight - No matplotlib, No sklearn)
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.linear_model import LogisticRegression, LinearRegression
-from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error, r2_score
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
 from scipy import stats
 from scipy.stats import probplot
 import plotly.express as px
@@ -62,18 +56,62 @@ st.markdown("""
 def load_sample_data(dataset_name):
     """Load sample datasets for demonstration"""
     if dataset_name == "Iris":
-        from sklearn.datasets import load_iris
-        data = load_iris()
-        df = pd.DataFrame(data.data, columns=data.feature_names)
-        df['target'] = data.target
-        df['species'] = df['target'].map({0: 'setosa', 1: 'versicolor', 2: 'virginica'})
+        # Generate Iris-like dataset
+        np.random.seed(42)
+        n_samples = 150
+        
+        # Generate features for three species
+        setosa = pd.DataFrame({
+            'sepal length (cm)': np.random.normal(5.0, 0.35, 50),
+            'sepal width (cm)': np.random.normal(3.4, 0.38, 50),
+            'petal length (cm)': np.random.normal(1.5, 0.17, 50),
+            'petal width (cm)': np.random.normal(0.2, 0.10, 50),
+            'species': 'setosa',
+            'target': 0
+        })
+        
+        versicolor = pd.DataFrame({
+            'sepal length (cm)': np.random.normal(5.9, 0.52, 50),
+            'sepal width (cm)': np.random.normal(2.8, 0.31, 50),
+            'petal length (cm)': np.random.normal(4.3, 0.47, 50),
+            'petal width (cm)': np.random.normal(1.3, 0.20, 50),
+            'species': 'versicolor',
+            'target': 1
+        })
+        
+        virginica = pd.DataFrame({
+            'sepal length (cm)': np.random.normal(6.6, 0.64, 50),
+            'sepal width (cm)': np.random.normal(3.0, 0.32, 50),
+            'petal length (cm)': np.random.normal(5.6, 0.55, 50),
+            'petal width (cm)': np.random.normal(2.0, 0.27, 50),
+            'species': 'virginica',
+            'target': 2
+        })
+        
+        df = pd.concat([setosa, versicolor, virginica], ignore_index=True)
         return df
     
     elif dataset_name == "Wine Quality":
-        from sklearn.datasets import load_wine
-        data = load_wine()
-        df = pd.DataFrame(data.data, columns=data.feature_names)
-        df['target'] = data.target
+        # Generate synthetic wine quality data
+        np.random.seed(42)
+        n_samples = 178
+        
+        df = pd.DataFrame({
+            'alcohol': np.random.uniform(11, 15, n_samples),
+            'malic_acid': np.random.uniform(0.7, 5.8, n_samples),
+            'ash': np.random.uniform(1.4, 3.2, n_samples),
+            'alcalinity_of_ash': np.random.uniform(10, 30, n_samples),
+            'magnesium': np.random.uniform(70, 162, n_samples),
+            'total_phenols': np.random.uniform(0.98, 3.88, n_samples),
+            'flavanoids': np.random.uniform(0.34, 5.08, n_samples),
+            'nonflavanoid_phenols': np.random.uniform(0.13, 0.66, n_samples),
+            'proanthocyanins': np.random.uniform(0.41, 3.58, n_samples),
+            'color_intensity': np.random.uniform(1.3, 13, n_samples),
+            'hue': np.random.uniform(0.48, 1.71, n_samples),
+            'od280/od315_of_diluted_wines': np.random.uniform(1.27, 4, n_samples),
+            'proline': np.random.uniform(278, 1680, n_samples),
+            'target': np.random.choice([0, 1, 2], n_samples)
+        })
         return df
     
     elif dataset_name == "Boston Housing":
@@ -117,7 +155,7 @@ def generate_statistical_summary(df):
 # Main App
 def main():
     st.title("📊 Interactive Data Science Dashboard")
-    st.markdown("**Explore, Analyze, and Model Your Data**")
+    st.markdown("**Explore, Analyze, and Visualize Your Data**")
     
     # Sidebar
     st.sidebar.title("⚙️ Configuration")
@@ -156,7 +194,6 @@ def main():
                 "📋 Data Overview",
                 "📈 Exploratory Analysis",
                 "🔍 Statistical Analysis",
-                "🤖 Machine Learning",
                 "📊 Interactive Visualizations"
             ]
         )
@@ -170,9 +207,6 @@ def main():
         
         elif analysis_mode == "🔍 Statistical Analysis":
             show_statistical_analysis(df)
-        
-        elif analysis_mode == "🤖 Machine Learning":
-            show_machine_learning(df)
         
         elif analysis_mode == "📊 Interactive Visualizations":
             show_interactive_visualizations(df)
@@ -192,7 +226,7 @@ def main():
             - Data profiling & overview
             - Statistical analysis
             - Interactive visualizations
-            - Machine learning models
+            - Data exploration tools
             - Export capabilities
             """)
         
@@ -201,8 +235,8 @@ def main():
             st.markdown("""
             - Pandas & NumPy
             - Plotly (interactive charts)
-            - Scikit-learn (ML)
             - SciPy (statistics)
+            - Pure Python analytics
             """)
         
         with col3:
@@ -444,143 +478,6 @@ def show_statistical_analysis(df):
         st.metric("Skewness", f"{data.skew():.2f}")
         st.metric("Kurtosis", f"{data.kurtosis():.2f}")
         st.metric("IQR", f"{data.quantile(0.75) - data.quantile(0.25):.2f}")
-
-def show_machine_learning(df):
-    """Display machine learning models"""
-    st.header("🤖 Machine Learning")
-    
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    
-    if len(numeric_cols) < 2:
-        st.warning("Need at least 2 numeric columns for machine learning.")
-        return
-    
-    # Model Selection
-    st.subheader("Model Configuration")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        model_type = st.selectbox(
-            "Select model type:",
-            ["Classification", "Regression"]
-        )
-    
-    with col2:
-        target_col = st.selectbox("Select target variable:", numeric_cols)
-    
-    feature_cols = st.multiselect(
-        "Select features:",
-        [col for col in numeric_cols if col != target_col],
-        default=[col for col in numeric_cols if col != target_col][:min(5, len(numeric_cols)-1)]
-    )
-    
-    if len(feature_cols) == 0:
-        st.warning("Please select at least one feature.")
-        return
-    
-    test_size = st.slider("Test set size:", 0.1, 0.5, 0.2, 0.05)
-    
-    if st.button("Train Model"):
-        # Prepare data
-        X = df[feature_cols].dropna()
-        y = df.loc[X.index, target_col]
-        
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=42
-        )
-        
-        # Scale features
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
-        
-        with st.spinner("Training model..."):
-            if model_type == "Classification":
-                # Train Random Forest Classifier
-                model = RandomForestClassifier(n_estimators=100, random_state=42)
-                model.fit(X_train_scaled, y_train)
-                
-                y_pred = model.predict(X_test_scaled)
-                
-                # Results
-                st.subheader("Classification Results")
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.metric("Training Accuracy", f"{model.score(X_train_scaled, y_train):.3f}")
-                    st.metric("Test Accuracy", f"{model.score(X_test_scaled, y_test):.3f}")
-                
-                # Confusion Matrix
-                with col2:
-                    cm = confusion_matrix(y_test, y_pred)
-                    
-                    # Create confusion matrix heatmap with Plotly
-                    fig = px.imshow(cm, 
-                                   text_auto=True,
-                                   color_continuous_scale='Blues',
-                                   labels=dict(x="Predicted Label", y="True Label", color="Count"),
-                                   title="Confusion Matrix")
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Classification Report
-                st.text("Classification Report:")
-                st.text(classification_report(y_test, y_pred))
-            
-            else:  # Regression
-                # Train Random Forest Regressor
-                model = RandomForestRegressor(n_estimators=100, random_state=42)
-                model.fit(X_train_scaled, y_train)
-                
-                y_pred = model.predict(X_test_scaled)
-                
-                # Results
-                st.subheader("Regression Results")
-                
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric("R² Score", f"{r2_score(y_test, y_pred):.3f}")
-                
-                with col2:
-                    st.metric("RMSE", f"{np.sqrt(mean_squared_error(y_test, y_pred)):.3f}")
-                
-                with col3:
-                    st.metric("MAE", f"{np.abs(y_test - y_pred).mean():.3f}")
-                
-                # Prediction vs Actual
-                fig = px.scatter(x=y_test, y=y_pred, 
-                               labels={'x': 'Actual Values', 'y': 'Predicted Values'},
-                               title="Predicted vs Actual Values")
-                
-                # Add diagonal line
-                min_val = min(y_test.min(), y_pred.min())
-                max_val = max(y_test.max(), y_pred.max())
-                fig.add_trace(go.Scatter(x=[min_val, max_val], y=[min_val, max_val],
-                                        mode='lines', name='Perfect Prediction',
-                                        line=dict(color='red', dash='dash')))
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # Residual Plot
-                residuals = y_test - y_pred
-                fig = px.scatter(x=y_pred, y=residuals,
-                               labels={'x': 'Predicted Values', 'y': 'Residuals'},
-                               title="Residual Plot")
-                fig.add_hline(y=0, line_dash="dash", line_color="red")
-                st.plotly_chart(fig, use_container_width=True)
-            
-            # Feature Importance
-            st.subheader("Feature Importance")
-            feature_importance = pd.DataFrame({
-                'Feature': feature_cols,
-                'Importance': model.feature_importances_
-            }).sort_values('Importance', ascending=True)
-            
-            fig = px.bar(feature_importance, x='Importance', y='Feature', 
-                        orientation='h',
-                        title="Feature Importance")
-            st.plotly_chart(fig, use_container_width=True)
 
 def show_interactive_visualizations(df):
     """Display interactive Plotly visualizations"""
