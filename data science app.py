@@ -1,15 +1,13 @@
 """
 Interactive Data Science Dashboard
-A comprehensive Streamlit app for data analysis, visualization, and statistical exploration
+A comprehensive Streamlit app for data analysis and visualization
 Author: AI Assistant
-Version: 4.0 (Ultra-Lightweight - Only Pandas, NumPy, Plotly)
+Version: 5.0 (Minimal - Only Streamlit, Pandas, NumPy)
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
 from io import StringIO
 import warnings
 
@@ -190,8 +188,7 @@ def main():
             "Choose analysis type:",
             [
                 "📋 Data Overview",
-                "📈 Exploratory Analysis",
-                "📊 Interactive Visualizations"
+                "📈 Exploratory Analysis"
             ]
         )
         
@@ -201,9 +198,6 @@ def main():
         
         elif analysis_mode == "📈 Exploratory Analysis":
             show_exploratory_analysis(df)
-        
-        elif analysis_mode == "📊 Interactive Visualizations":
-            show_interactive_visualizations(df)
     
     else:
         st.info("👈 Please upload a CSV file or select a sample dataset from the sidebar to begin.")
@@ -219,7 +213,7 @@ def main():
             st.markdown("""
             - Data profiling & overview
             - Exploratory data analysis
-            - Interactive visualizations
+            - Built-in visualizations
             - Correlation analysis
             - Distribution analysis
             """)
@@ -227,10 +221,10 @@ def main():
         with col2:
             st.subheader("🔧 Technologies")
             st.markdown("""
+            - Streamlit native charts
             - Pandas & NumPy
-            - Plotly (interactive charts)
             - Pure Python
-            - Lightweight & Fast
+            - Minimal dependencies
             """)
         
         with col3:
@@ -277,19 +271,22 @@ def show_data_overview(df):
     st.subheader("Statistical Summary")
     st.dataframe(df.describe(), use_container_width=True)
     
-    # Missing values heatmap
+    # Missing values analysis
     if df.isnull().sum().sum() > 0:
-        st.subheader("Missing Values Heatmap")
+        st.subheader("Missing Values Analysis")
         
-        # Create heatmap data
-        missing_data = df.isnull().astype(int)
+        missing_summary = pd.DataFrame({
+            'Column': df.columns,
+            'Missing Count': df.isnull().sum().values,
+            'Missing Percentage': (df.isnull().sum().values / len(df) * 100).round(2)
+        })
+        missing_summary = missing_summary[missing_summary['Missing Count'] > 0]
         
-        fig = px.imshow(missing_data.T, 
-                       labels=dict(x="Row Index", y="Column", color="Missing"),
-                       color_continuous_scale=['lightblue', 'darkblue'],
-                       title="Missing Values Pattern")
-        fig.update_xaxes(showticklabels=False)
-        st.plotly_chart(fig, use_container_width=True)
+        if not missing_summary.empty:
+            st.dataframe(missing_summary, use_container_width=True)
+            
+            # Bar chart of missing values
+            st.bar_chart(missing_summary.set_index('Column')['Missing Count'])
 
 def show_exploratory_analysis(df):
     """Display exploratory data analysis"""
@@ -309,22 +306,16 @@ def show_exploratory_analysis(df):
         selected_col = st.selectbox("Select column for distribution:", numeric_cols)
     
     with col2:
-        plot_type = st.selectbox("Plot type:", ["Histogram", "Box Plot", "Violin Plot"])
+        plot_type = st.selectbox("Plot type:", ["Histogram", "Line Chart"])
     
     if plot_type == "Histogram":
-        fig = px.histogram(df, x=selected_col, nbins=30, 
-                          title=f"Distribution of {selected_col}")
-        st.plotly_chart(fig, use_container_width=True)
+        st.subheader(f"Distribution of {selected_col}")
+        hist_data = df[selected_col].dropna()
+        st.bar_chart(hist_data.value_counts().sort_index())
     
-    elif plot_type == "Box Plot":
-        fig = px.box(df, y=selected_col, 
-                    title=f"Box Plot of {selected_col}")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    elif plot_type == "Violin Plot":
-        fig = px.violin(df, y=selected_col, box=True,
-                       title=f"Violin Plot of {selected_col}")
-        st.plotly_chart(fig, use_container_width=True)
+    elif plot_type == "Line Chart":
+        st.subheader(f"Line Chart of {selected_col}")
+        st.line_chart(df[selected_col])
     
     # Correlation Analysis
     if len(numeric_cols) > 1:
@@ -332,15 +323,11 @@ def show_exploratory_analysis(df):
         
         corr_matrix = df[numeric_cols].corr()
         
-        # Create interactive heatmap with Plotly
-        fig = px.imshow(corr_matrix, 
-                       text_auto='.2f',
-                       color_continuous_scale='RdBu_r',
-                       color_continuous_midpoint=0,
-                       title="Correlation Heatmap",
-                       labels=dict(color="Correlation"))
-        fig.update_xaxes(side="bottom")
-        st.plotly_chart(fig, use_container_width=True)
+        # Display correlation matrix as dataframe with color styling
+        st.dataframe(
+            corr_matrix.style.background_gradient(cmap='coolwarm', axis=None, vmin=-1, vmax=1),
+            use_container_width=True
+        )
         
         # Top correlations
         st.subheader("Top Correlations")
@@ -362,11 +349,9 @@ def show_exploratory_analysis(df):
         with col2:
             y_col = st.selectbox("Y-axis:", numeric_cols, index=min(1, len(numeric_cols)-1))
         
-        # Create scatter plot with trendline
-        fig = px.scatter(df, x=x_col, y=y_col, 
-                        trendline="ols",
-                        title=f"{y_col} vs {x_col}")
-        st.plotly_chart(fig, use_container_width=True)
+        # Create scatter plot using Streamlit
+        scatter_data = df[[x_col, y_col]].dropna()
+        st.scatter_chart(scatter_data, x=x_col, y=y_col)
     
     # Descriptive Statistics
     st.subheader("Descriptive Statistics")
@@ -393,92 +378,5 @@ def show_exploratory_analysis(df):
             st.metric("75th %ile", f"{data.quantile(0.75):.2f}")
             st.metric("IQR", f"{data.quantile(0.75) - data.quantile(0.25):.2f}")
 
-def show_interactive_visualizations(df):
-    """Display interactive Plotly visualizations"""
-    st.header("📊 Interactive Visualizations")
-    
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    
-    if len(numeric_cols) == 0:
-        st.warning("No numeric columns found for visualization.")
-        return
-    
-    # Visualization type
-    viz_type = st.selectbox(
-        "Select visualization type:",
-        ["Scatter Plot", "Line Chart", "Bar Chart", "3D Scatter", "Box Plot", "Violin Plot"]
-    )
-    
-    if viz_type == "Scatter Plot" and len(numeric_cols) >= 2:
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            x_col = st.selectbox("X-axis:", numeric_cols, index=0)
-        with col2:
-            y_col = st.selectbox("Y-axis:", numeric_cols, index=1)
-        with col3:
-            color_col = st.selectbox("Color by:", [None] + df.columns.tolist())
-        
-        fig = px.scatter(df, x=x_col, y=y_col, color=color_col,
-                        title=f"{y_col} vs {x_col}",
-                        hover_data=df.columns)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    elif viz_type == "Line Chart":
-        y_cols = st.multiselect("Select columns to plot:", numeric_cols, default=numeric_cols[:3])
-        
-        if len(y_cols) > 0:
-            fig = go.Figure()
-            for col in y_cols:
-                fig.add_trace(go.Scatter(y=df[col], name=col, mode='lines'))
-            
-            fig.update_layout(title="Line Chart", xaxis_title="Index", yaxis_title="Value")
-            st.plotly_chart(fig, use_container_width=True)
-    
-    elif viz_type == "Bar Chart":
-        col = st.selectbox("Select column:", numeric_cols)
-        
-        fig = px.bar(df, y=col, title=f"Bar Chart of {col}")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    elif viz_type == "3D Scatter" and len(numeric_cols) >= 3:
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            x_col = st.selectbox("X-axis:", numeric_cols, index=0, key='3d_x')
-        with col2:
-            y_col = st.selectbox("Y-axis:", numeric_cols, index=1, key='3d_y')
-        with col3:
-            z_col = st.selectbox("Z-axis:", numeric_cols, index=2, key='3d_z')
-        
-        color_col = st.selectbox("Color by:", [None] + df.columns.tolist(), key='3d_color')
-        
-        fig = px.scatter_3d(df, x=x_col, y=y_col, z=z_col, color=color_col,
-                           title=f"3D Scatter Plot")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    elif viz_type == "Box Plot":
-        cols = st.multiselect("Select columns:", numeric_cols, default=numeric_cols[:min(5, len(numeric_cols))])
-        
-        if len(cols) > 0:
-            fig = go.Figure()
-            for col in cols:
-                fig.add_trace(go.Box(y=df[col], name=col))
-            
-            fig.update_layout(title="Box Plot Comparison")
-            st.plotly_chart(fig, use_container_width=True)
-    
-    elif viz_type == "Violin Plot":
-        cols = st.multiselect("Select columns:", numeric_cols, default=numeric_cols[:min(5, len(numeric_cols))], key='violin')
-        
-        if len(cols) > 0:
-            fig = go.Figure()
-            for col in cols:
-                fig.add_trace(go.Violin(y=df[col], name=col, box_visible=True))
-            
-            fig.update_layout(title="Violin Plot Comparison")
-            st.plotly_chart(fig, use_container_width=True)
-
 if __name__ == "__main__":
     main()
-    
