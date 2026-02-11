@@ -6,8 +6,13 @@ A comprehensive Streamlit app for data analysis, visualization, and machine lear
 import streamlit as st
 import pandas as pd
 import numpy as np
+
+# CRITICAL FIX: Configure matplotlib backend BEFORE importing pyplot
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.linear_model import LogisticRegression, LinearRegression
